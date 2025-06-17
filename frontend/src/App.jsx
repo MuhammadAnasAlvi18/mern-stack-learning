@@ -17,7 +17,7 @@ function App() {
   const [message, setMessage] = useState({
     text: "",
     type: "" // "success" or "error"
-  })
+  }) 
 
   const fetchStudents = async () => {
     try {
