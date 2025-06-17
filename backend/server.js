@@ -29,18 +29,46 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// MongoDB Connection Options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+};
+
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/");
+    const conn = await mongoose.connect(
+      process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/",
+      mongooseOptions
+    );
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    process.exit(1);
+    // Don't exit process in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Retrying connection in 5 seconds...');
+      setTimeout(connectDB, 5000);
+    } else {
+      process.exit(1);
+    }
   }
 };
 
+// Connect to MongoDB
 connectDB();
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected. Attempting to reconnect...');
+  connectDB();
+});
 
 // Routes
 app.post("/api/add-student", async (req, res) => {
@@ -48,6 +76,11 @@ app.post("/api/add-student", async (req, res) => {
         console.log('Received add-student request:', req.body);
         const { name, age, standard } = req.body;
         
+        // Check MongoDB connection
+        if (mongoose.connection.readyState !== 1) {
+            throw new Error('Database connection not ready');
+        }
+
         // Validate input
         if (!name || !age || !standard) {
             console.log('Validation failed:', { name, age, standard });
@@ -80,6 +113,12 @@ app.post("/api/add-student", async (req, res) => {
 app.get("/api/get-students", async (req, res) => {
     try {
         console.log('Fetching students...');
+        
+        // Check MongoDB connection
+        if (mongoose.connection.readyState !== 1) {
+            throw new Error('Database connection not ready');
+        }
+
         const students = await studentModel.find();
         console.log('Students fetched:', students);
         res.status(200).json({ 
@@ -99,7 +138,8 @@ app.get("/api/get-students", async (req, res) => {
 app.get("/api/health", (req, res) => {
     res.status(200).json({ 
         status: "ok",
-        mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+        mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+        readyState: mongoose.connection.readyState
     });
 });
 
