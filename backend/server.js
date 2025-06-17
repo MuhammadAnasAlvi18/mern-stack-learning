@@ -30,21 +30,27 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/")
-    .then(() => {
-        console.log("Database connected successfully");
-    })
-    .catch((err) => {
-        console.error("Database connection error:", err);
-    });
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/");
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
+  }
+};
+
+connectDB();
 
 // Routes
 app.post("/api/add-student", async (req, res) => {
     try {
+        console.log('Received add-student request:', req.body);
         const { name, age, standard } = req.body;
         
         // Validate input
         if (!name || !age || !standard) {
+            console.log('Validation failed:', { name, age, standard });
             return res.status(400).json({ 
                 success: false, 
                 error: "All fields are required" 
@@ -57,6 +63,7 @@ app.post("/api/add-student", async (req, res) => {
             standard: standard
         });
 
+        console.log('Student created successfully:', student);
         res.status(201).json({ 
             success: true, 
             data: student 
@@ -65,14 +72,16 @@ app.post("/api/add-student", async (req, res) => {
         console.error("Error creating student:", err);
         res.status(500).json({ 
             success: false, 
-            error: err.message 
+            error: err.message || "Internal server error"
         });
     }
 });
 
 app.get("/api/get-students", async (req, res) => {
     try {
+        console.log('Fetching students...');
         const students = await studentModel.find();
+        console.log('Students fetched:', students);
         res.status(200).json({ 
             success: true, 
             data: students 
@@ -81,14 +90,26 @@ app.get("/api/get-students", async (req, res) => {
         console.error("Error fetching students:", err);
         res.status(500).json({ 
             success: false, 
-            error: err.message 
+            error: err.message || "Internal server error"
         });
     }
 });
 
 // Health check route
 app.get("/api/health", (req, res) => {
-    res.status(200).json({ status: "ok" });
+    res.status(200).json({ 
+        status: "ok",
+        mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+    });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(500).json({
+        success: false,
+        error: err.message || "Internal server error"
+    });
 });
 
 // For local development

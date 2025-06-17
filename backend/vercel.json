@@ -22,5 +22,8 @@
       "dest": "/api/$1",
       "status": 308
     }
-  ]
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb_uri"
+  }
 } 
