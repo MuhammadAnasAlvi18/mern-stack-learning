@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import axios from 'axios'
 
-// API base URL - remove trailing slash
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api';
+// API base URL - ensure no trailing slash
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 
 function App() {
   const [values, setValues] = useState({
