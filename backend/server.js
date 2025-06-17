@@ -33,54 +33,82 @@ app.use(express.json());
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 30000,
+  maxPoolSize: 10
 };
+
+let isConnecting = false;
+let connectionPromise = null;
 
 // MongoDB Connection
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(
-      process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/",
-      mongooseOptions
-    );
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    // Don't exit process in production
-    if (process.env.NODE_ENV === 'production') {
-      console.log('Retrying connection in 5 seconds...');
-      setTimeout(connectDB, 5000);
-    } else {
-      process.exit(1);
-    }
+  if (isConnecting) {
+    return connectionPromise;
   }
+
+  if (mongoose.connection.readyState === 1) {
+    return Promise.resolve();
+  }
+
+  isConnecting = true;
+  connectionPromise = new Promise(async (resolve, reject) => {
+    try {
+      const conn = await mongoose.connect(
+        process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/",
+        mongooseOptions
+      );
+      console.log(`MongoDB Connected: ${conn.connection.host}`);
+      isConnecting = false;
+      resolve(conn);
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      isConnecting = false;
+      reject(error);
+    }
+  });
+
+  return connectionPromise;
 };
 
-// Connect to MongoDB
-connectDB();
+// Initial connection
+connectDB().catch(console.error);
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', err => {
   console.error('MongoDB connection error:', err);
+  isConnecting = false;
 });
 
 mongoose.connection.on('disconnected', () => {
   console.log('MongoDB disconnected. Attempting to reconnect...');
-  connectDB();
+  isConnecting = false;
+  connectDB().catch(console.error);
 });
 
+// Middleware to ensure DB connection
+const ensureConnection = async (req, res, next) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database connection error. Please try again.'
+    });
+  }
+};
+
 // Routes
-app.post("/api/add-student", async (req, res) => {
+app.post("/api/add-student", ensureConnection, async (req, res) => {
     try {
         console.log('Received add-student request:', req.body);
         const { name, age, standard } = req.body;
         
-        // Check MongoDB connection
-        if (mongoose.connection.readyState !== 1) {
-            throw new Error('Database connection not ready');
-        }
-
         // Validate input
         if (!name || !age || !standard) {
             console.log('Validation failed:', { name, age, standard });
@@ -110,15 +138,9 @@ app.post("/api/add-student", async (req, res) => {
     }
 });
 
-app.get("/api/get-students", async (req, res) => {
+app.get("/api/get-students", ensureConnection, async (req, res) => {
     try {
         console.log('Fetching students...');
-        
-        // Check MongoDB connection
-        if (mongoose.connection.readyState !== 1) {
-            throw new Error('Database connection not ready');
-        }
-
         const students = await studentModel.find();
         console.log('Students fetched:', students);
         res.status(200).json({ 
@@ -135,12 +157,28 @@ app.get("/api/get-students", async (req, res) => {
 });
 
 // Health check route
-app.get("/api/health", (req, res) => {
-    res.status(200).json({ 
-        status: "ok",
-        mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-        readyState: mongoose.connection.readyState
-    });
+app.get("/api/health", async (req, res) => {
+    try {
+        const dbState = mongoose.connection.readyState;
+        const dbStatus = {
+            0: 'disconnected',
+            1: 'connected',
+            2: 'connecting',
+            3: 'disconnecting'
+        }[dbState] || 'unknown';
+
+        res.status(200).json({ 
+            status: "ok",
+            mongodb: dbStatus,
+            readyState: dbState,
+            isConnecting
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "error",
+            error: error.message
+        });
+    }
 });
 
 // Error handling middleware
