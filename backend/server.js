@@ -33,11 +33,16 @@ app.use(express.json());
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+  serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
   connectTimeoutMS: 30000,
-  maxPoolSize: 10
+  maxPoolSize: 10,
+  retryWrites: true,
+  w: 'majority'
 };
+
+// MongoDB Connection String
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/studentdb?retryWrites=true&w=majority";
 
 let isConnecting = false;
 let connectionPromise = null;
@@ -55,10 +60,8 @@ const connectDB = async () => {
   isConnecting = true;
   connectionPromise = new Promise(async (resolve, reject) => {
     try {
-      const conn = await mongoose.connect(
-        process.env.MONGODB_URI || "mongodb+srv://root:developer@cluster0.ycfxdos.mongodb.net/",
-        mongooseOptions
-      );
+      console.log('Attempting to connect to MongoDB...');
+      const conn = await mongoose.connect(MONGODB_URI, mongooseOptions);
       console.log(`MongoDB Connected: ${conn.connection.host}`);
       isConnecting = false;
       resolve(conn);
