@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import axios from 'axios'
 
-// API base URL
+// API base URL - remove trailing slash
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api';
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
 
   const fetchStudents = async () => {
     try {
-      const response = await axios.get(`${API_URL}/get-students`);
+      const response = await axios.get(`${API_URL}/api/get-students`);
       if (response.data.success) {
         setStudents(response.data.data);
       }
@@ -50,7 +50,7 @@ function App() {
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await axios.post(`${API_URL}/add-student`, values);
+      const response = await axios.post(`${API_URL}/api/add-student`, values);
       setMessage({
         text: "Student added successfully!",
         type: "success"
