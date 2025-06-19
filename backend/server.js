@@ -7,9 +7,9 @@ const app = express();
 
 // CORS configuration
 const allowedOrigins = [
-  'http://localhost:5173',  // Vite dev server
-  'http://127.0.0.1:5173', // Vite dev server alternative
-  'https://mern-stack-learning-frontend.vercel.app' // Production frontend
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://mern-stack-learning-frontend.vercel.app'
 ];
 
 const corsOptions = {
