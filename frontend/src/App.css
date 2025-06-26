@@ -390,6 +390,37 @@ header {
   animation: rotate 2s linear infinite;
 }
 
+.popover {
+  position: relative;
+}
+
+.popoverButton {
+  cursor: pointer;
+}
+
+.popoverPanel {
+  position: absolute;
+  z-index: 10;
+  margin-top: 28px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  min-width: 192px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.popoverPanel a{
+  text-decoration: none;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 500;
+}
+
 @keyframes rotate {
   0% {
     transform: rotate(0deg);
@@ -414,4 +445,13 @@ header {
     justify-content: center;
     margin-bottom: 1rem;
   }
+}
+
+.p-submenu-list{
+  width: auto;
+  top: 45px;
+}
+
+.p-menuitem-link{
+  gap: 5px;
 }

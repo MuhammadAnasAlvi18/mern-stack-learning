@@ -1,10 +1,9 @@
-import { useEffect } from "react";
 import { axiosInstance } from "../lib/axiosInstance";
 import { useAuthStore } from "../store/useAuthStore";
+import { Menubar } from 'primereact/menubar';
 
 const Header = () => {
   const { user} = useAuthStore();
-
   const handleLogout = async () => {
     try {
       const res = await axiosInstance.get("/logout");
@@ -14,6 +13,20 @@ const Header = () => {
       console.log(error.message);
     }
   };
+
+  const items = [
+        {
+            label: user ? user.fullname : "",
+            items: [
+                {
+                    label: 'Logout',
+                    command: () => {
+                        handleLogout();
+                    }
+                }
+            ]
+        }
+    ];
 
   return (
     <header>
@@ -36,9 +49,7 @@ const Header = () => {
       </ul>
       <div className="header-btn">
         {user ? (
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
+          <Menubar model={items} />
         ) : (
           <>
             <a href="/login">Login</a>
