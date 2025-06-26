@@ -28,7 +28,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-        const res = await axiosInstance.post('/login', formData);
+        const res = await axiosInstance.post('/login', formData, {withCredentials: true});
         setUser(res.data);
         setMessage("User Logged In Successfully");
         setError('');

@@ -9,8 +9,10 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:5173", "https://mern-stack-learning-frontend.vercel.app"], // Your frontend URL
-    credentials: true // Allow cookies to be sent
+    origin: process.env.NODE_ENV === "production"
+      ? "https://mern-stack-learning-frontend.vercel.app"
+      : "http://localhost:5173",
+    credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
